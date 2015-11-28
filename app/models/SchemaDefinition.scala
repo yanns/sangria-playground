@@ -73,8 +73,8 @@ object SchemaDefinition {
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
-        Field("masterVariant", Variant, Some("variant used by default"), resolve = _.value.masterVariant)))
-//        Field("variants", ListType(Variant), Some("other possible variants"), resolve = _.value.variants)))
+        Field("masterVariant", Variant, Some("variant used by default"), resolve = _.value.masterVariant),
+        Field("variants", ListType(Variant), Some("other possible variants"), resolve = _.value.variants)))
 
   val QueryType = ObjectType[ProductRepo, Unit]("query",
     fields[ProductRepo, Unit](

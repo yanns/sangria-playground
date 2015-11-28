@@ -30,7 +30,7 @@ class Application @Inject() (system: ActorSystem) extends Controller {
   val executor = Executor(
     schema = SchemaDefinition.MyShopSchema,
     userContext = new ProductRepo,
-    maxQueryDepth = Some(7))
+    maxQueryDepth = Some(10))
 
   def graphql(query: String, variables: Option[String], operation: Option[String]) =
     Action.async(executeQuery(query, variables, operation))
