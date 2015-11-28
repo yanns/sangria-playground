@@ -1,111 +1,51 @@
 package models
 
-import sangria.schema.{Deferred, DeferredResolver}
+import java.util.Locale
 
-import scala.concurrent.Future
-import scala.util.Try
-
-object Episode extends Enumeration {
-  val NEWHOPE, EMPIRE, JEDI = Value
+object CurrencyCode extends Enumeration {
+  val EUR, USD = Value
 }
 
-trait Character {
-  def id: String
-  def name: Option[String]
-  def friends: List[String]
-  def appearsIn: List[Episode.Value]
+case class LocalizedString(values: Map[Locale, String])
+object LocalizedString {
+  def apply(ls: (Locale, String)*): LocalizedString =
+    LocalizedString(ls.toMap)
 }
 
-case class Human(
+case class Price(
+  centAmount: Long,
+  currencyCode: CurrencyCode.Value)
+
+case class Variant(
+  name: String,
+  names: LocalizedString,
+  price: Price)
+
+case class Product(
   id: String,
-  name: Option[String],
-  friends: List[String],
-  appearsIn: List[Episode.Value],
-  homePlanet: Option[String]) extends Character
+  name: String,
+  names: LocalizedString,
+  masterVariant: Variant,
+  variants: List[Variant])
 
-case class Droid(
-  id: String,
-  name: Option[String],
-  friends: List[String],
-  appearsIn: List[Episode.Value],
-  primaryFunction: Option[String]) extends Character
+object Product {
+  import Locale._
 
-/**
- * Instructs sangria to postpone the expansion of the friends list to the last responsible moment and then batch
- * all collected defers together.
- */
-case class DeferFriends(friends: List[String]) extends Deferred[List[Option[Character]]]
+  import CurrencyCode._
 
-/**
- * Resolves the lists of friends collected during the query execution.
- * For this demonstration the implementation is pretty simplistic, but in real-world scenario you
- * probably want to batch all of the deferred values in one efficient fetch.
- */
-class FriendsResolver extends DeferredResolver[Any] {
-  override def resolve(deferred: List[Deferred[Any]], ctx: Any) = deferred map {
-    case DeferFriends(friendIds) =>
-      Future.fromTry(Try(
-        friendIds map (id => CharacterRepo.humans.find(_.id == id) orElse CharacterRepo.droids.find(_.id == id))))
-  }
+  val products = List(
+    Product(
+      id = "1",
+      name = "running shoes",
+      names = LocalizedString(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
+      masterVariant = Variant("white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"), Price(3400, EUR)),
+      variants = List(
+        Variant("black", LocalizedString(ENGLISH → "black", FRENCH → "noir"), Price(3600, EUR)),
+        Variant("red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"), Price(3500, EUR)))))
 }
 
-class CharacterRepo {
-  import models.CharacterRepo._
+class ProductRepo {
+  def getProduct(id: String): Option[Product] =
+    Product.products.find(_.id == id)
 
-  def getHero(episode: Option[Episode.Value]) =
-    episode flatMap (_ => getHuman("1000")) getOrElse droids.last
-
-  def getHuman(id: String): Option[Human] = humans.find(c => c.id == id)
-
-  def getDroid(id: String): Option[Droid] = droids.find(c => c.id == id)
-}
-
-object CharacterRepo {
-  val humans = List(
-    Human(
-      id = "1000",
-      name = Some("Luke Skywalker"),
-      friends = List("1002", "1003", "2000", "2001"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      homePlanet = Some("Tatooine")),
-    Human(
-      id = "1001",
-      name = Some("Darth Vader"),
-      friends = List("1004"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      homePlanet = Some("Tatooine")),
-    Human(
-      id = "1002",
-      name = Some("Han Solo"),
-      friends = List("1000", "1003", "2001"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      homePlanet = None),
-    Human(
-      id = "1003",
-      name = Some("Leia Organa"),
-      friends = List("1000", "1002", "2000", "2001"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      homePlanet = Some("Alderaan")),
-    Human(
-      id = "1004",
-      name = Some("Wilhuff Tarkin"),
-      friends = List("1001"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      homePlanet = None)
-  )
-
-  val droids = List(
-    Droid(
-      id = "2000",
-      name = Some("C-3PO"),
-      friends = List("1000", "1002", "1003", "2001"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      primaryFunction = Some("Protocol")),
-    Droid(
-      id = "2001",
-      name = Some("R2-D2"),
-      friends = List("1000", "1002", "1003"),
-      appearsIn = List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI),
-      primaryFunction = Some("Astromech"))
-  )
 }

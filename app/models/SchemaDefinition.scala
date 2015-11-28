@@ -1,110 +1,86 @@
 package models
 
-import sangria.schema._
+import java.util.Locale
 
-import scala.concurrent.Future
+import sangria.ast
+import sangria.schema._
+import sangria.validation.ValueCoercionViolation
+
+import scala.util.{Failure, Success, Try}
 
 /**
  * Defines a GraphQL schema for the current project
  */
 object SchemaDefinition {
-  val EpisodeEnum = EnumType(
-    "Episode",
-    Some("One of the films in the Star Wars Trilogy"),
+  val ID = Argument("id", StringType, description = "id of the product")
+
+  case object LocaleCoercionViolation extends ValueCoercionViolation("Locale value expected")
+
+  def parseLocale(s: String) = Try(Locale.forLanguageTag(s)) match {
+    case Success(l) ⇒ Right(l)
+    case Failure(_) ⇒ Left(LocaleCoercionViolation)
+  }
+
+  val LocaleType = ScalarType[Locale]("Locale",
+    description = Some("Locale is a scalar value represented as a string language tag."),
+    coerceOutput = locale ⇒ ast.StringValue(locale.toLanguageTag),
+    coerceUserInput = {
+      case s: String ⇒ parseLocale(s)
+      case _ ⇒ Left(LocaleCoercionViolation)
+    },
+    coerceInput = {
+      case ast.StringValue(s, _) ⇒ parseLocale(s)
+      case _ ⇒ Left(LocaleCoercionViolation)
+    })
+
+  val LocaleArg = Argument("locale", LocaleType, description =
+    "String is define for different locales. This argument specifies the desired locale.")
+
+  def localizedStringField[Ctx, Val](name: String, resolve: Val ⇒ LocalizedString): Field[Ctx, Val] =
+    Field(name, OptionType(StringType),
+      arguments = LocaleArg :: Nil,
+      resolve = ctx ⇒ resolve(ctx.value).values get ctx.arg(LocaleArg))
+
+
+  val CurrencyEnum = EnumType(
+    "Currency",
+    Some("ISO_4217 currency code"),
     List(
-      EnumValue("NEWHOPE",
-        value = Episode.NEWHOPE,
-        description = Some("Released in 1977.")),
-      EnumValue("EMPIRE",
-        value = Episode.EMPIRE,
-        description = Some("Released in 1980.")),
-      EnumValue("JEDI",
-        value = Episode.JEDI,
-        description = Some("Released in 1983."))))
+      EnumValue("EUR", Some("euro"), CurrencyCode.EUR),
+      EnumValue("USD", Some("US dollar"), CurrencyCode.USD)))
 
-  val Character: InterfaceType[Unit, Character] =
-    InterfaceType(
-      "Character",
-      "A character in the Star Wars Trilogy",
-      () => fields[Unit, Character](
-        Field("id", StringType,
-          Some("The id of the character."),
-          resolve = _.value.id),
-        Field("name", OptionType(StringType),
-          Some("The name of the character."),
-          resolve = _.value.name),
-        Field("friends", OptionType(ListType(OptionType(Character))),
-          Some("The friends of the character, or an empty list if they have none."),
-          resolve = ctx => DeferFriends(ctx.value.friends)),
-        Field("appearsIn", OptionType(ListType(OptionType(EpisodeEnum))),
-          Some("Which movies they appear in."),
-          resolve = _.value.appearsIn map (e => Some(e)))
-      ))
-
-  val Human =
+  val Price =
     ObjectType(
-      "Human",
-      "A humanoid creature in the Star Wars universe.",
-      interfaces[Unit, Human](Character),
-      fields[Unit, Human](
-        Field("id", StringType,
-          Some("The id of the human."),
-          tags = ProjectionName("_id") :: Nil,
-          resolve = _.value.id),
-        Field("name", OptionType(StringType),
-          Some("The name of the human."),
-          resolve = _.value.name),
-        Field("friends", OptionType(ListType(OptionType(Character))),
-          Some("The friends of the human, or an empty list if they have none."),
-          resolve = (ctx) => DeferFriends(ctx.value.friends)),
-        Field("appearsIn", OptionType(ListType(OptionType(EpisodeEnum))),
-          Some("Which movies they appear in."),
-          resolve = _.value.appearsIn map (e => Some(e))),
-        Field("homePlanet", OptionType(StringType),
-          Some("The home planet of the human, or null if unknown."),
-          resolve = _.value.homePlanet)
-      ))
+      "price",
+      fields[Unit, Price](
+        Field("centAmount", LongType,
+          Some("The amount in cents (the smallest indivisible unit of the currency)."),
+          resolve = _.value.centAmount),
+        Field("currencyCode", CurrencyEnum, resolve = _.value.currencyCode)))
 
-  val Droid = ObjectType[Unit, Droid](
-    "Droid",
-    "A mechanical creature in the Star Wars universe.",
-    interfaces[Unit, Droid](Character),
-    fields[Unit, Droid](
-      Field("id", StringType,
-        Some("The id of the droid."),
-        tags = ProjectionName("_id") :: Nil,
-        resolve = _.value.id),
-      Field("name", OptionType(StringType),
-        Some("The name of the droid."),
-        resolve = ctx => Future.successful(ctx.value.name)),
-      Field("friends", OptionType(ListType(OptionType(Character))),
-        Some("The friends of the droid, or an empty list if they have none."),
-        resolve = ctx => DeferFriends(ctx.value.friends)),
-      Field("appearsIn", OptionType(ListType(OptionType(EpisodeEnum))),
-        Some("Which movies they appear in."),
-        resolve = _.value.appearsIn map (e => Some(e))),
-      Field("primaryFunction", OptionType(StringType),
-        Some("The primary function of the droid."),
-        resolve = _.value.primaryFunction)
-    ))
+  val Variant =
+    ObjectType(
+      "variant",
+      fields[Unit, Variant](
+        Field("name", StringType, Some("name"), resolve = _.value.name),
+        localizedStringField("names", _.names),
+        Field("price", Price, resolve = _.value.price)))
 
-  val ID = Argument("id", StringType, description = "id of the character")
+  val Product =
+    ObjectType(
+      "product",
+      fields[Unit, Product](
+        Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
+        Field("name", StringType, Some("name"), resolve = _.value.name),
+        localizedStringField("names", _.names),
+        Field("masterVariant", Variant, Some("variant used by default"), resolve = _.value.masterVariant)))
+//        Field("variants", ListType(Variant), Some("other possible variants"), resolve = _.value.variants)))
 
-  val EpisodeArg = Argument("episode", OptionInputType(EpisodeEnum),
-    description = "If omitted, returns the hero of the whole saga. If provided, returns the hero of that particular episode.")
-
-  val Query = ObjectType(
-    "Query", fields[CharacterRepo, Unit](
-      Field("hero", Character,
-        arguments = EpisodeArg :: Nil,
-        resolve = (ctx) => ctx.ctx.getHero(ctx.argOpt(EpisodeArg))),
-      Field("human", OptionType(Human),
+  val QueryType = ObjectType[ProductRepo, Unit]("query",
+    fields[ProductRepo, Unit](
+      Field("product", OptionType(Product),
         arguments = ID :: Nil,
-        resolve = ctx => ctx.ctx.getHuman(ctx arg ID)),
-      Field("droid", Droid,
-        arguments = ID :: Nil,
-        resolve = Projector((ctx, f) => ctx.ctx.getDroid(ctx arg ID).get))
-    ))
+        resolve = (ctx) ⇒ ctx.ctx.getProduct(ctx arg ID))))
 
-  val StarWarsSchema = Schema(Query)
+  val MyShopSchema = Schema(QueryType)
 }

@@ -6,7 +6,7 @@ version := "1.0-SNAPSHOT"
 scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(
-  "org.sangria-graphql" %% "sangria" % "0.4.1",
+  "org.sangria-graphql" %% "sangria" % "0.4.3",
   // WebJars (i.e. client-side) dependencies
   "org.webjars" % "react" % "0.13.3",
   "org.webjars.bower" % "fetch" % "0.9.0",

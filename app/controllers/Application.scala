@@ -3,16 +3,14 @@ package controllers
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
-import play.api._
+import models.{ProductRepo, SchemaDefinition}
+import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
-
 import sangria.execution.Executor
-import sangria.introspection.introspectionQuery
-import sangria.parser.{SyntaxError, QueryParser}
 import sangria.integration.playJson._
-
-import models.{FriendsResolver, CharacterRepo, SchemaDefinition}
+import sangria.introspection.introspectionQuery
+import sangria.parser.{QueryParser, SyntaxError}
 import sangria.renderer.SchemaRenderer
 
 import scala.concurrent.Future
@@ -30,9 +28,8 @@ class Application @Inject() (system: ActorSystem) extends Controller {
   }
 
   val executor = Executor(
-    schema = SchemaDefinition.StarWarsSchema,
-    userContext = new CharacterRepo,
-    deferredResolver = new FriendsResolver,
+    schema = SchemaDefinition.MyShopSchema,
+    userContext = new ProductRepo,
     maxQueryDepth = Some(7))
 
   def graphql(query: String, variables: Option[String], operation: Option[String]) =
