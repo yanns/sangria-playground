@@ -41,3 +41,8 @@ fragment v on variant {
 }
 
 
+with query variables:
+{
+  "locale": "en",
+  "country": "us"
+}

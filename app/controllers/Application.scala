@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import models.SchemaDefinition.ProductsResolver
-import models.{ProductRepo, SchemaDefinition}
+import models.{MyShopContext, SchemaDefinition}
 import play.api.libs.json._
 import play.api.mvc._
 import sangria.execution.Executor
@@ -29,7 +29,7 @@ class Application @Inject() (system: ActorSystem) extends Controller {
 
   val executor = Executor(
     schema = SchemaDefinition.MyShopSchema,
-    userContext = new ProductRepo,
+    userContext = new MyShopContext,
     deferredResolver = new ProductsResolver(),
     maxQueryDepth = Some(10))
 

@@ -47,8 +47,9 @@ object Product {
   import Locale._
   import CurrencyCode._
   import LocalizedString.i18n
+  import scala.collection.mutable
 
-  val products = List(
+  val products = mutable.ListBuffer(
     Product(
       id = "1",
       names = i18n(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
@@ -102,10 +103,31 @@ object Product {
 }
 
 class ProductRepo {
+  import Locale._
+  import CurrencyCode._
+  import LocalizedString.i18n
+
   def getProduct(id: String): Option[Product] =
     Product.products.find(_.id == id)
 
   def getProducts(): List[Product] =
-    Product.products
+    Product.products.toList
 
+  def addProduct(names: Seq[(Locale, String)]): Product = {
+    val id = Product.products.map(_.id.toLong).max + 1
+    val newProduct =
+      Product(
+        id = id.toString,
+        names = i18n(names: _*),
+        variants = Nil,
+        canBeCombinedWith = Nil)
+
+    Product.products += newProduct
+    newProduct
+  }
+
+}
+
+class MyShopContext {
+  lazy val productRepo = new ProductRepo
 }

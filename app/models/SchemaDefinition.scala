@@ -20,9 +20,9 @@ object SchemaDefinition {
   val MasterVariantArg = Argument("master", OptionInputType(BooleanType))
 
   case class DeferProducts(ids: List[String]) extends Deferred[List[Product]]
-  class ProductsResolver extends DeferredResolver[ProductRepo] {
-    override def resolve(deferred: List[Deferred[Any]], ctx: ProductRepo) = deferred map {
-      case DeferProducts(ids) ⇒ Future.successful(ids flatMap ctx.getProduct)
+  class ProductsResolver extends DeferredResolver[MyShopContext] {
+    override def resolve(deferred: List[Deferred[Any]], ctx: MyShopContext) = deferred map {
+      case DeferProducts(ids) ⇒ Future.successful(ids flatMap ctx.productRepo.getProduct)
     }
   }
 
@@ -131,14 +131,36 @@ object SchemaDefinition {
         )
       ))
 
-  val QueryType = ObjectType[ProductRepo, Unit]("query",
-    fields[ProductRepo, Unit](
+  val QueryType = ObjectType[MyShopContext, Unit]("query",
+    fields[MyShopContext, Unit](
       Field("product", OptionType(Product),
         arguments = ID :: Nil,
-        resolve = (ctx) ⇒ ctx.ctx.getProduct(ctx arg ID)),
+        resolve = (ctx) ⇒ ctx.ctx.productRepo.getProduct(ctx arg ID)),
       Field("products", ListType(Product),
         arguments = LimitArg :: OffsetArg :: Nil,
-        resolve = ctx ⇒ filter(ctx.ctx.getProducts(), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg)))))
+        resolve = ctx ⇒ filter(ctx.ctx.productRepo.getProducts(), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg)))))
 
-  val MyShopSchema = Schema(QueryType)
+  // mutations
+
+  val OneNameInput =
+    InputObjectType(
+      "name",
+      List(
+        InputField("locale", LocaleType),
+        InputField("value", StringType)))
+
+  val NamesArg = Argument("names", ListInputType(OneNameInput))
+
+  val MutationType = ObjectType[MyShopContext, Unit]("mutation",
+    fields[MyShopContext, Unit](
+      Field("newProduct", OptionType(Product),
+        arguments = NamesArg :: Nil,
+        resolve = ctx ⇒ {
+          val names = ctx.args.arg(NamesArg).map(m ⇒ m("locale").asInstanceOf[Locale] → m("value").toString)
+          ctx.ctx.productRepo.addProduct(names)
+        })))
+
+
+  // complete schema
+  val MyShopSchema = Schema(QueryType, Some(MutationType))
 }
