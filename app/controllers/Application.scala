@@ -3,8 +3,8 @@ package controllers
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
+import models.SchemaDefinition.ProductsResolver
 import models.{ProductRepo, SchemaDefinition}
-import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc._
 import sangria.execution.Executor
@@ -30,6 +30,7 @@ class Application @Inject() (system: ActorSystem) extends Controller {
   val executor = Executor(
     schema = SchemaDefinition.MyShopSchema,
     userContext = new ProductRepo,
+    deferredResolver = new ProductsResolver(),
     maxQueryDepth = Some(10))
 
   def graphql(query: String, variables: Option[String], operation: Option[String]) =

@@ -6,10 +6,17 @@ object CurrencyCode extends Enumeration {
   val EUR, USD = Value
 }
 
-case class LocalizedString(values: Map[Locale, String])
+case class LocalizedString(values: Map[Locale, String]) {
+  def apply(l: Locale): String = values(l)
+}
+
 object LocalizedString {
   def apply(ls: (Locale, String)*): LocalizedString =
     LocalizedString(ls.toMap)
+
+  def i18n(ls: (Locale, String)*): LocalizedString =
+    LocalizedString(ls.toMap)
+
 }
 
 case class Price(
@@ -18,47 +25,87 @@ case class Price(
 
 case class Variant(
   master: Boolean,
-  name: String,
-  names: LocalizedString,
-  price: Price,
-  prices: Map[String, Price])
+  descriptions: LocalizedString,
+  prices: Map[String, Price]) {
+
+  def description = descriptions(Locale.ENGLISH)
+  def price = prices("us")
+}
 
 case class Product(
   id: String,
-  name: String,
   names: LocalizedString,
-  variants: List[Variant]) {
+  variants: List[Variant],
+  canBeCombinedWith: List[String] = Nil) {
+
+  def name = names(Locale.ENGLISH)
 
   def masterVariant: Option[Variant] = variants.find(_.master == true)
 }
 
 object Product {
   import Locale._
-
   import CurrencyCode._
+  import LocalizedString.i18n
 
   val products = List(
     Product(
       id = "1",
-      name = "running shoes",
-      names = LocalizedString(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
+      names = i18n(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
       variants = List(
         Variant(master = true,
-          "white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"),
-          Price(3900, USD),
+          i18n(ENGLISH → "white", FRENCH → "blanc"),
           Map("us" → Price(3900, USD), "fr" → Price(3400, EUR))),
         Variant(master = false,
-          "black", LocalizedString(ENGLISH → "black", FRENCH → "noir"),
-          Price(3600, USD),
+          i18n(ENGLISH → "black", FRENCH → "noir"),
           Map("us" → Price(3600, USD), "fr" → Price(3200, EUR))),
         Variant(master = false,
-          "red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"),
-          Price(3500, USD),
-          Map("us" → Price(3500, USD), "fr" → Price(3100, EUR))))))
+          i18n(ENGLISH → "red", FRENCH → "rouge"),
+          Map("us" → Price(3500, USD), "fr" → Price(3100, EUR))))),
+
+    Product(
+      id = "2",
+      names = i18n(ENGLISH → "basketball shoes", FRENCH → "godasses pour sauter haut"),
+      variants = List(
+        Variant(master = true,
+          i18n(ENGLISH → "white", FRENCH → "blanc"),
+          Map("us" → Price(3900, USD), "fr" → Price(3400, EUR))),
+        Variant(master = false,
+          i18n(ENGLISH → "black", FRENCH → "noir"),
+          Map("us" → Price(4600, USD), "fr" → Price(4200, EUR)))),
+      canBeCombinedWith = List("3", "4")),
+
+    Product(
+      id = "3",
+      names = i18n(ENGLISH → "basketball shirt", FRENCH → "shirt de basket"),
+      variants = List(
+        Variant(master = true,
+          i18n(ENGLISH → "blank", FRENCH → "sans inscriptions"),
+          Map("us" → Price(3600, USD), "fr" → Price(3200, EUR))),
+        Variant(master = false,
+          i18n(ENGLISH → "with number 23", FRENCH → "avec le numéro 23"),
+          Map("us" → Price(3900, USD), "fr" → Price(3300, EUR)))),
+      canBeCombinedWith = List("2", "4")),
+
+    Product(
+      id = "4",
+      names = i18n(ENGLISH → "basketball T-shirt", FRENCH → "T-shirt de basket"),
+      variants = List(
+        Variant(master = true,
+          i18n(ENGLISH → "blank", FRENCH → "sans inscriptions"),
+          Map("us" → Price(3600, USD), "fr" → Price(3200, EUR))),
+        Variant(master = false,
+          i18n(ENGLISH → "with number 23", FRENCH → "avec le numéro 23"),
+          Map("us" → Price(3900, USD), "fr" → Price(3300, EUR)))),
+      canBeCombinedWith = List("2", "3"))
+  )
 }
 
 class ProductRepo {
   def getProduct(id: String): Option[Product] =
     Product.products.find(_.id == id)
+
+  def getProducts(): List[Product] =
+    Product.products
 
 }

@@ -1,0 +1,43 @@
+query products($locale: Locale!, $country: Country!) {
+  product(id: "2") {
+    id
+    name: names(locale: $locale)
+    ...masterVariant
+    masterVariant: variants(master: true) {
+      ...v
+    }
+    variants(master: false, limit: 1, offset: 1) {
+      ...v
+    }
+  }
+
+  products {
+    name: names(locale: $locale)
+    ...masterVariant
+    canBeCombinedWith {
+      name: names(locale: $locale)
+      ...masterVariant
+    }
+  }
+}
+
+fragment masterVariant on product {
+  masterVariant: variants(master: true) {
+    ...v
+  }
+}
+
+fragment v on variant {
+#  master
+  description: descriptions(locale: $locale)
+  prices(country: $country) {
+    centAmount
+    currencyCode
+  }
+#  price {
+#    centAmount
+#    currencyCode
+#  }
+}
+
+

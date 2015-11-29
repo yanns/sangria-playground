@@ -7,6 +7,7 @@ import sangria.ast
 import sangria.schema._
 import sangria.validation.ValueCoercionViolation
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -17,6 +18,13 @@ object SchemaDefinition {
   val LimitArg = Argument("limit", OptionInputType(IntType))
   val OffsetArg = Argument("offset", OptionInputType(IntType))
   val MasterVariantArg = Argument("master", OptionInputType(BooleanType))
+
+  case class DeferProducts(ids: List[String]) extends Deferred[List[Product]]
+  class ProductsResolver extends DeferredResolver[ProductRepo] {
+    override def resolve(deferred: List[Deferred[Any]], ctx: ProductRepo) = deferred map {
+      case DeferProducts(ids) ⇒ Future.successful(ids flatMap ctx.getProduct)
+    }
+  }
 
   case object LocaleCoercionViolation extends ValueCoercionViolation("Locale value expected")
   case object CountryCodeViolation extends ValueCoercionViolation("ISO 639-1 country code expected")
@@ -43,7 +51,7 @@ object SchemaDefinition {
     else Right(s)
 
   val CountryType = ScalarType[String]("Country",
-    description = Some("Country is a scalar value represented as a string language tag."),
+    description = Some("Country is a scalar value represented an ISO 639-1 country code."),
     coerceOutput = ast.StringValue(_),
     coerceUserInput = {
       case s: String ⇒ parseCountry(s)
@@ -86,8 +94,8 @@ object SchemaDefinition {
     ObjectType(
       "variant",
       fields[Unit, Variant](
-        Field("name", StringType, Some("name"), resolve = _.value.name),
-        localizedStringField("names", _.names),
+        Field("description", StringType, Some("description"), resolve = _.value.description),
+        localizedStringField("descriptions", _.descriptions),
         Field("price", Price, resolve = _.value.price),
         Field("master", BooleanType, Some("master variant"), resolve = _.value.master),
         Field("prices", OptionType(Price),
@@ -107,24 +115,30 @@ object SchemaDefinition {
     filter(variants, limit = limit, offset = offset)
   }
 
-  val Product =
+  val Product: ObjectType[Unit, Product] =
     ObjectType(
       "product",
-      fields[Unit, Product](
+      () ⇒ fields[Unit, Product](
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
         Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
-        Field("variants", ListType(Variant), Some("other possible variants"),
+        Field("variants", ListType(Variant), Some("possible variants"),
           arguments = MasterVariantArg :: LimitArg :: OffsetArg :: Nil,
-          resolve = ctx ⇒ filterVariant(ctx.value.variants, ctx.argOpt(MasterVariantArg), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg)))
+          resolve = ctx ⇒ filterVariant(ctx.value.variants, ctx.argOpt(MasterVariantArg), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg))),
+        Field("canBeCombinedWith", ListType(Product), Some("products than can be combined with this one"),
+          resolve = ctx ⇒ DeferProducts(ctx.value.canBeCombinedWith)
+        )
       ))
 
   val QueryType = ObjectType[ProductRepo, Unit]("query",
     fields[ProductRepo, Unit](
       Field("product", OptionType(Product),
         arguments = ID :: Nil,
-        resolve = (ctx) ⇒ ctx.ctx.getProduct(ctx arg ID))))
+        resolve = (ctx) ⇒ ctx.ctx.getProduct(ctx arg ID)),
+      Field("products", ListType(Product),
+        arguments = LimitArg :: OffsetArg :: Nil,
+        resolve = ctx ⇒ filter(ctx.ctx.getProducts(), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg)))))
 
   val MyShopSchema = Schema(QueryType)
 }
