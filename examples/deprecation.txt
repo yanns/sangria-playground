@@ -1,0 +1,5 @@
+  t: __type(name: "product") {
+    fields(includeDeprecated: false) {
+      name
+    }
+  }

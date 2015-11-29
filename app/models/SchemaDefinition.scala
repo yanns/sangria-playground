@@ -120,7 +120,7 @@ object SchemaDefinition {
       "product",
       () ⇒ fields[Unit, Product](
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
-        Field("name", StringType, Some("name"), resolve = _.value.name),
+        Field("name", StringType, Some("name"), resolve = _.value.name, deprecationReason = Some("use names")),
         localizedStringField("names", _.names),
         Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
         Field("variants", ListType(Variant), Some("possible variants"),
