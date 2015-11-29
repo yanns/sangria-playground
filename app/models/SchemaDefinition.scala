@@ -146,18 +146,18 @@ object SchemaDefinition {
     InputObjectType(
       "name",
       List(
-        InputField("locale", LocaleType),
-        InputField("value", StringType)))
+        InputField("en", StringType),
+        InputField("fr", StringType)))
 
-  val NamesArg = Argument("names", ListInputType(OneNameInput))
+  val NamesArg = Argument("names", OneNameInput)
 
   val MutationType = ObjectType[MyShopContext, Unit]("mutation",
     fields[MyShopContext, Unit](
       Field("newProduct", OptionType(Product),
         arguments = NamesArg :: Nil,
         resolve = ctx ⇒ {
-          val names = ctx.args.arg(NamesArg).map(m ⇒ m("locale").asInstanceOf[Locale] → m("value").toString)
-          ctx.ctx.productRepo.addProduct(names)
+          val names = ctx.args.arg(NamesArg).map {case (k,v) ⇒ Locale.forLanguageTag(k) -> v.toString}.toSeq
+          ctx.ctx.productRepo.addProduct(names: _*)
         })))
 
 

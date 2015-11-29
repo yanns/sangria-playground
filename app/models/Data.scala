@@ -113,7 +113,7 @@ class ProductRepo {
   def getProducts(): List[Product] =
     Product.products.toList
 
-  def addProduct(names: Seq[(Locale, String)]): Product = {
+  def addProduct(names: (Locale, String)*): Product = {
     val id = Product.products.map(_.id.toLong).max + 1
     val newProduct =
       Product(
