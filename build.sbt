@@ -7,6 +7,7 @@ scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(
   "org.sangria-graphql" %% "sangria" % "0.4.3",
+  "com.neovisionaries" % "nv-i18n" % "1.17",
   // WebJars (i.e. client-side) dependencies
   "org.webjars" % "react" % "0.13.3",
   "org.webjars.bower" % "fetch" % "0.9.0",

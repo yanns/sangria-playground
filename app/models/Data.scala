@@ -19,7 +19,8 @@ case class Price(
 case class Variant(
   name: String,
   names: LocalizedString,
-  price: Price)
+  price: Price,
+  prices: Map[String, Price])
 
 case class Product(
   id: String,
@@ -38,10 +39,16 @@ object Product {
       id = "1",
       name = "running shoes",
       names = LocalizedString(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
-      masterVariant = Variant("white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"), Price(3400, EUR)),
+      masterVariant = Variant("white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"),
+        Price(3900, USD),
+        Map("us" → Price(3900, USD), "fr" → Price(3400, EUR))),
       variants = List(
-        Variant("black", LocalizedString(ENGLISH → "black", FRENCH → "noir"), Price(3600, EUR)),
-        Variant("red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"), Price(3500, EUR)))))
+        Variant("black", LocalizedString(ENGLISH → "black", FRENCH → "noir"),
+          Price(3600, USD),
+          Map("us" → Price(3600, USD), "fr" → Price(3200, EUR))),
+        Variant("red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"),
+          Price(3500, USD),
+          Map("us" → Price(3500, USD), "fr" → Price(3100, EUR))))))
 }
 
 class ProductRepo {

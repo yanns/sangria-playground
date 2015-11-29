@@ -2,6 +2,7 @@ package models
 
 import java.util.Locale
 
+import com.neovisionaries.i18n.CountryCode
 import sangria.ast
 import sangria.schema._
 import sangria.validation.ValueCoercionViolation
@@ -13,8 +14,11 @@ import scala.util.{Failure, Success, Try}
  */
 object SchemaDefinition {
   val ID = Argument("id", StringType, description = "id of the product")
+  val LimitArg = Argument("limit", OptionInputType(IntType))
+  val OffsetArg = Argument("offset", OptionInputType(IntType))
 
   case object LocaleCoercionViolation extends ValueCoercionViolation("Locale value expected")
+  case object CountryCodeViolation extends ValueCoercionViolation("ISO 639-1 country code expected")
 
   def parseLocale(s: String) = Try(Locale.forLanguageTag(s)) match {
     case Success(l) ⇒ Right(l)
@@ -33,8 +37,27 @@ object SchemaDefinition {
       case _ ⇒ Left(LocaleCoercionViolation)
     })
 
+  def parseCountry(s: String): Either[CountryCodeViolation.type, String] =
+    if (CountryCode.getByCode(s) == CountryCode.UNDEFINED) Left(CountryCodeViolation)
+    else Right(s)
+
+  val CountryType = ScalarType[String]("Country",
+    description = Some("Country is a scalar value represented as a string language tag."),
+    coerceOutput = ast.StringValue(_),
+    coerceUserInput = {
+      case s: String ⇒ parseCountry(s)
+      case _ ⇒ Left(CountryCodeViolation)
+    },
+    coerceInput = {
+      case ast.StringValue(s, _) ⇒ parseCountry(s)
+      case _ ⇒ Left(CountryCodeViolation)
+    })
+
   val LocaleArg = Argument("locale", LocaleType, description =
     "String is define for different locales. This argument specifies the desired locale.")
+
+  val CountryArg = Argument("country", CountryType, description =
+    "String is define for different countries. This argument specifies the desired country.")
 
   def localizedStringField[Ctx, Val](name: String, resolve: Val ⇒ LocalizedString): Field[Ctx, Val] =
     Field(name, OptionType(StringType),
@@ -64,7 +87,18 @@ object SchemaDefinition {
       fields[Unit, Variant](
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
-        Field("price", Price, resolve = _.value.price)))
+        Field("price", Price, resolve = _.value.price),
+        Field("prices", OptionType(Price),
+          arguments = CountryArg :: Nil,
+          resolve = ctx ⇒ ctx.value.prices.get(ctx.arg(CountryArg)))))
+
+  def filter[A](l: List[A], limit: Option[Int], offset: Option[Int]): List[A] =
+    (limit, offset) match {
+      case (Some(li), Some(of)) ⇒ l.slice(of, of + li)
+      case (Some(li), None) ⇒ l.take(li)
+      case (None, Some(of)) ⇒ l.drop(of)
+      case (None, None) ⇒ l
+    }
 
   val Product =
     ObjectType(
@@ -74,7 +108,10 @@ object SchemaDefinition {
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
         Field("masterVariant", Variant, Some("variant used by default"), resolve = _.value.masterVariant),
-        Field("variants", ListType(Variant), Some("other possible variants"), resolve = _.value.variants)))
+        Field("variants", ListType(Variant), Some("other possible variants"),
+          arguments = LimitArg :: OffsetArg :: Nil,
+          resolve = ctx ⇒ filter(ctx.value.variants, ctx.argOpt(LimitArg), ctx.argOpt(OffsetArg)))
+      ))
 
   val QueryType = ObjectType[ProductRepo, Unit]("query",
     fields[ProductRepo, Unit](
