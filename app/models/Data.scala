@@ -17,6 +17,7 @@ case class Price(
   currencyCode: CurrencyCode.Value)
 
 case class Variant(
+  master: Boolean,
   name: String,
   names: LocalizedString,
   price: Price,
@@ -26,8 +27,10 @@ case class Product(
   id: String,
   name: String,
   names: LocalizedString,
-  masterVariant: Variant,
-  variants: List[Variant])
+  variants: List[Variant]) {
+
+  def masterVariant: Option[Variant] = variants.find(_.master == true)
+}
 
 object Product {
   import Locale._
@@ -39,14 +42,17 @@ object Product {
       id = "1",
       name = "running shoes",
       names = LocalizedString(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
-      masterVariant = Variant("white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"),
-        Price(3900, USD),
-        Map("us" → Price(3900, USD), "fr" → Price(3400, EUR))),
       variants = List(
-        Variant("black", LocalizedString(ENGLISH → "black", FRENCH → "noir"),
+        Variant(master = true,
+          "white", LocalizedString(ENGLISH → "white", FRENCH → "blanc"),
+          Price(3900, USD),
+          Map("us" → Price(3900, USD), "fr" → Price(3400, EUR))),
+        Variant(master = false,
+          "black", LocalizedString(ENGLISH → "black", FRENCH → "noir"),
           Price(3600, USD),
           Map("us" → Price(3600, USD), "fr" → Price(3200, EUR))),
-        Variant("red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"),
+        Variant(master = false,
+          "red", LocalizedString(ENGLISH → "red", FRENCH → "rouge"),
           Price(3500, USD),
           Map("us" → Price(3500, USD), "fr" → Price(3100, EUR))))))
 }

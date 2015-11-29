@@ -16,6 +16,7 @@ object SchemaDefinition {
   val ID = Argument("id", StringType, description = "id of the product")
   val LimitArg = Argument("limit", OptionInputType(IntType))
   val OffsetArg = Argument("offset", OptionInputType(IntType))
+  val MasterVariantArg = Argument("master", OptionInputType(BooleanType))
 
   case object LocaleCoercionViolation extends ValueCoercionViolation("Locale value expected")
   case object CountryCodeViolation extends ValueCoercionViolation("ISO 639-1 country code expected")
@@ -88,17 +89,23 @@ object SchemaDefinition {
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
         Field("price", Price, resolve = _.value.price),
+        Field("master", BooleanType, Some("master variant"), resolve = _.value.master),
         Field("prices", OptionType(Price),
           arguments = CountryArg :: Nil,
           resolve = ctx ⇒ ctx.value.prices.get(ctx.arg(CountryArg)))))
 
-  def filter[A](l: List[A], limit: Option[Int], offset: Option[Int]): List[A] =
+  private def filter[A](l: List[A], limit: Option[Int], offset: Option[Int]): List[A] =
     (limit, offset) match {
       case (Some(li), Some(of)) ⇒ l.slice(of, of + li)
       case (Some(li), None) ⇒ l.take(li)
       case (None, Some(of)) ⇒ l.drop(of)
       case (None, None) ⇒ l
     }
+
+  private def filterVariant(l: List[Variant], master: Option[Boolean], limit: Option[Int], offset: Option[Int]): List[Variant] = {
+    val variants = master.fold(l)(m ⇒ l.filter(_.master == m))
+    filter(variants, limit = limit, offset = offset)
+  }
 
   val Product =
     ObjectType(
@@ -107,10 +114,10 @@ object SchemaDefinition {
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
         Field("name", StringType, Some("name"), resolve = _.value.name),
         localizedStringField("names", _.names),
-        Field("masterVariant", Variant, Some("variant used by default"), resolve = _.value.masterVariant),
+        Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
         Field("variants", ListType(Variant), Some("other possible variants"),
-          arguments = LimitArg :: OffsetArg :: Nil,
-          resolve = ctx ⇒ filter(ctx.value.variants, ctx.argOpt(LimitArg), ctx.argOpt(OffsetArg)))
+          arguments = MasterVariantArg :: LimitArg :: OffsetArg :: Nil,
+          resolve = ctx ⇒ filterVariant(ctx.value.variants, ctx.argOpt(MasterVariantArg), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg)))
       ))
 
   val QueryType = ObjectType[ProductRepo, Unit]("query",
