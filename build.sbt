@@ -10,6 +10,7 @@ libraryDependencies ++= Seq(
   "com.neovisionaries" % "nv-i18n" % "1.17",
   // WebJars (i.e. client-side) dependencies
   "org.webjars" % "react" % "0.13.3",
+  "org.webjars" % "graphiql" % "0.3.1-1",
   "org.webjars.bower" % "fetch" % "0.9.0",
   "org.webjars" % "jquery" % "2.1.4"
 )
