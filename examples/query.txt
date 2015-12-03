@@ -1,5 +1,5 @@
 query products($locale: Locale!, $country: Country!) {
-  product(id: "2") {
+  product(id: "54") {
     id
     name: names(locale: $locale)
     ...masterVariant

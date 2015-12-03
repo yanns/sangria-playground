@@ -51,7 +51,7 @@ object Product {
 
   val products = mutable.ListBuffer(
     Product(
-      id = "1",
+      id = "45",
       names = i18n(ENGLISH → "running shoes", FRENCH → "godasses pour courir vite"),
       variants = List(
         Variant(master = true,
@@ -65,7 +65,7 @@ object Product {
           Map("us" → Price(3500, USD), "fr" → Price(3100, EUR))))),
 
     Product(
-      id = "2",
+      id = "46",
       names = i18n(ENGLISH → "basketball shoes", FRENCH → "godasses pour sauter haut"),
       variants = List(
         Variant(master = true,
@@ -74,10 +74,10 @@ object Product {
         Variant(master = false,
           i18n(ENGLISH → "black", FRENCH → "noir"),
           Map("us" → Price(4600, USD), "fr" → Price(4200, EUR)))),
-      canBeCombinedWith = List("3", "4")),
+      canBeCombinedWith = List("54", "58")),
 
     Product(
-      id = "3",
+      id = "54",
       names = i18n(ENGLISH → "basketball shirt", FRENCH → "shirt de basket"),
       variants = List(
         Variant(master = true,
@@ -86,10 +86,10 @@ object Product {
         Variant(master = false,
           i18n(ENGLISH → "with number 23", FRENCH → "avec le numéro 23"),
           Map("us" → Price(3900, USD), "fr" → Price(3300, EUR)))),
-      canBeCombinedWith = List("2", "4")),
+      canBeCombinedWith = List("46", "58")),
 
     Product(
-      id = "4",
+      id = "58",
       names = i18n(ENGLISH → "basketball T-shirt", FRENCH → "T-shirt de basket"),
       variants = List(
         Variant(master = true,
@@ -98,7 +98,7 @@ object Product {
         Variant(master = false,
           i18n(ENGLISH → "with number 23", FRENCH → "avec le numéro 23"),
           Map("us" → Price(3900, USD), "fr" → Price(3300, EUR)))),
-      canBeCombinedWith = List("2", "3"))
+      canBeCombinedWith = List("46", "54"))
   )
 }
 
