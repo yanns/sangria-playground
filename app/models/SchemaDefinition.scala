@@ -26,8 +26,10 @@ object SchemaDefinition {
     }
   }
 
-  case object LocaleCoercionViolation extends ValueCoercionViolation("Locale value expected")
-  case object CountryCodeViolation extends ValueCoercionViolation("ISO 639-1 country code expected")
+  val IETF_BCP_47 = "[IETF BCP 47](https://tools.ietf.org/html/bcp47)"
+  val ISO_639_1 = "[ISO 639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)"
+  case object LocaleCoercionViolation extends ValueCoercionViolation(s"$IETF_BCP_47 language tag locale value expected")
+  case object CountryCodeViolation extends ValueCoercionViolation(s"$ISO_639_1 country code expected")
 
   def parseLocale(s: String) = Try(Locale.forLanguageTag(s)) match {
     case Success(l) ⇒ Right(l)
@@ -35,7 +37,7 @@ object SchemaDefinition {
   }
 
   val LocaleType = ScalarType[Locale]("Locale",
-    description = Some("Locale is a scalar value represented as a string language tag."),
+    description = Some(s"$IETF_BCP_47 language tag string."),
     coerceOutput = locale ⇒ ast.StringValue(locale.toLanguageTag),
     coerceUserInput = {
       case s: String ⇒ parseLocale(s)
@@ -51,7 +53,7 @@ object SchemaDefinition {
     else Right(s)
 
   val CountryType = ScalarType[String]("Country",
-    description = Some("Country is a scalar value represented an ISO 639-1 country code."),
+    description = Some(s"$ISO_639_1  country code."),
     coerceOutput = ast.StringValue(_),
     coerceUserInput = {
       case s: String ⇒ parseCountry(s)
@@ -84,6 +86,7 @@ object SchemaDefinition {
   val Price =
     ObjectType(
       "price",
+      "price of a product",
       fields[Unit, Price](
         Field("centAmount", LongType,
           Some("The amount in cents (the smallest indivisible unit of the currency)."),
@@ -93,6 +96,7 @@ object SchemaDefinition {
   val Variant =
     ObjectType(
       "variant",
+      "variant of a product",
       fields[Unit, Variant](
         Field("description", StringType, Some("description"), resolve = _.value.description),
 //        localizedStringField("descriptions", _.descriptions),
@@ -120,9 +124,11 @@ object SchemaDefinition {
   val Product: ObjectType[Unit, Product] =
     ObjectType(
       "product",
+      "a product exists in different variants",
       () ⇒ fields[Unit, Product](
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
         Field("name", StringType, Some("name"), resolve = _.value.name),
+//        Field("name", StringType, Some("name"), resolve = _.value.name, deprecationReason = Some("use names")),
 //        localizedStringField("names", _.names),
         Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
         Field("variants", ListType(Variant), Some("possible variants"),
@@ -134,6 +140,7 @@ object SchemaDefinition {
       ))
 
   val QueryType = ObjectType[MyShopContext, Unit]("query",
+    "possible queries",
     fields[MyShopContext, Unit](
       Field("product", OptionType(Product),
         arguments = ID :: Nil,
