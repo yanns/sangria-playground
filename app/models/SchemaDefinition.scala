@@ -95,12 +95,13 @@ object SchemaDefinition {
       "variant",
       fields[Unit, Variant](
         Field("description", StringType, Some("description"), resolve = _.value.description),
-        localizedStringField("descriptions", _.descriptions),
+//        localizedStringField("descriptions", _.descriptions),
         Field("price", Price, resolve = _.value.price),
-        Field("master", BooleanType, Some("master variant"), resolve = _.value.master),
-        Field("prices", OptionType(Price),
-          arguments = CountryArg :: Nil,
-          resolve = ctx ⇒ ctx.value.prices.get(ctx.arg(CountryArg)))))
+        Field("master", BooleanType, Some("master variant"), resolve = _.value.master)
+//        ,Field("prices", OptionType(Price),
+//          arguments = CountryArg :: Nil,
+//          resolve = ctx ⇒ ctx.value.prices.get(ctx.arg(CountryArg)))
+      ))
 
   private def filter[A](l: List[A], limit: Option[Int], offset: Option[Int]): List[A] =
     (limit, offset) match {
@@ -111,7 +112,8 @@ object SchemaDefinition {
     }
 
   private def filterVariant(l: List[Variant], master: Option[Boolean], limit: Option[Int], offset: Option[Int]): List[Variant] = {
-    val variants = master.fold(l)(m ⇒ l.filter(_.master == m))
+//    val variants = master.fold(l)(m ⇒ l.filter(_.master == m))
+    val variants = l.drop(1)
     filter(variants, limit = limit, offset = offset)
   }
 
@@ -120,8 +122,8 @@ object SchemaDefinition {
       "product",
       () ⇒ fields[Unit, Product](
         Field("id", StringType, Some("unique identifier"), resolve = _.value.id),
-        Field("name", StringType, Some("name"), resolve = _.value.name, deprecationReason = Some("use names")),
-        localizedStringField("names", _.names),
+        Field("name", StringType, Some("name"), resolve = _.value.name),
+//        localizedStringField("names", _.names),
         Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
         Field("variants", ListType(Variant), Some("possible variants"),
           arguments = MasterVariantArg :: LimitArg :: OffsetArg :: Nil,

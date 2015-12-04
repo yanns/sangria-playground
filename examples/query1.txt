@@ -1,0 +1,30 @@
+{
+  product(id: "45") {
+    id
+    name
+    masterVariant {
+      ...v
+    }
+
+    variants(limit: 1, offset: 1) {
+      ...v
+    }
+
+    canBeCombinedWith {
+      id, name
+      canBeCombinedWith {
+        id, name
+      }
+    }
+  }
+}
+
+fragment v on variant {
+  description
+  price {
+    centAmount
+    currencyCode
+  }
+}
+
+# change to 54 for canBeCombinedWith
