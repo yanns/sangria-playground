@@ -53,7 +53,7 @@ object SchemaDefinition {
     else Right(s)
 
   val CountryType = ScalarType[String]("Country",
-    description = Some(s"$ISO_639_1  country code."),
+    description = Some(s"$ISO_639_1 country code."),
     coerceOutput = ast.StringValue(_),
     coerceUserInput = {
       case s: String ⇒ parseCountry(s)
@@ -76,9 +76,10 @@ object SchemaDefinition {
       resolve = ctx ⇒ resolve(ctx.value).values get ctx.arg(LocaleArg))
 
 
+  val ISO_4217 = "[ISO 4217](https://en.wikipedia.org/wiki/ISO_4217)"
   val CurrencyEnum = EnumType(
     "Currency",
-    Some("ISO_4217 currency code"),
+    Some(s"$ISO_4217 currency code"),
     List(
       EnumValue("EUR", Some("euro"), CurrencyCode.EUR),
       EnumValue("USD", Some("US dollar"), CurrencyCode.USD)))
@@ -86,7 +87,7 @@ object SchemaDefinition {
   val Price =
     ObjectType(
       "price",
-      "price of a product",
+      s"price of a product with an $ISO_4217 currency code",
       fields[Unit, Price](
         Field("centAmount", LongType,
           Some("The amount in cents (the smallest indivisible unit of the currency)."),
