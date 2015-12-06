@@ -117,8 +117,7 @@ object SchemaDefinition {
     }
 
   private def filterVariant(l: List[Variant], master: Option[Boolean], limit: Option[Int], offset: Option[Int]): List[Variant] = {
-//    val variants = master.fold(l)(m ⇒ l.filter(_.master == m))
-    val variants = l.drop(1)
+    val variants = master.fold(l)(m ⇒ l.filter(_.master == m))
     filter(variants, limit = limit, offset = offset)
   }
 
@@ -133,8 +132,11 @@ object SchemaDefinition {
 //        localizedStringField("names", _.names),
         Field("masterVariant", OptionType(Variant), Some("variant used by default"), resolve = _.value.masterVariant),
         Field("variants", ListType(Variant), Some("possible variants"),
-          arguments = MasterVariantArg :: LimitArg :: OffsetArg :: Nil,
-          resolve = ctx ⇒ filterVariant(ctx.value.variants, ctx.argOpt(MasterVariantArg), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg))),
+          arguments = LimitArg :: OffsetArg :: Nil,
+          resolve = ctx ⇒ filterVariant(ctx.value.variants, Some(false), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg))),
+//        Field("variants", ListType(Variant), Some("possible variants"),
+//          arguments = MasterVariantArg :: LimitArg :: OffsetArg :: Nil,
+//          resolve = ctx ⇒ filterVariant(ctx.value.variants, ctx.argOpt(MasterVariantArg), limit = ctx.argOpt(LimitArg), offset = ctx.argOpt(OffsetArg))),
         Field("canBeCombinedWith", ListType(Product), Some("products than can be combined with this one"),
           resolve = ctx ⇒ DeferProducts(ctx.value.canBeCombinedWith)
         )
